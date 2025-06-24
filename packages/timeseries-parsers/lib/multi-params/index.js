@@ -66,6 +66,7 @@ function consolidateData(rawData) {
 
   const dailyDataTab = rawData.dataTabs.find(tab => tab.period === '1 jour' && tab.hasData)
   const fifteenMinutesDataTab = rawData.dataTabs.find(tab => tab.period === '15 minutes' && tab.hasData)
+  const quarterlyDataTab = rawData.dataTabs.find(tab => tab.period === '1 trimestre' && tab.hasData)
 
   if (!dailyDataTab) {
     throw new Error('Le fichier ne contient pas de données à la maille journalière')
@@ -82,6 +83,7 @@ function consolidateData(rawData) {
   ]))
 
   let fifteenMinutesDataByDate
+  let quarterlyValues
 
   if (fifteenMinutesDataTab) {
     data.fifteenMinutesParameters = fifteenMinutesDataTab.parameters.map(p => pick(p, [
@@ -106,6 +108,20 @@ function consolidateData(rawData) {
       .value()
   }
 
+  if (quarterlyDataTab) {
+    data.quarterlyParameters = quarterlyDataTab.parameters.map(p => pick(p, [
+      'paramIndex',
+      'nom_parametre',
+      'type',
+      'unite'
+    ]))
+
+    quarterlyValues = quarterlyDataTab.rows.map(row => ({
+      date: row.date,
+      values: Object.values(pick(row.values, quarterlyDataTab.parameters.map(p => p.paramIndex)))
+    }))
+  }
+
   const volumePreleveParam = dailyDataTab.parameters.find(p => p.nom_parametre === 'volume prélevé')
 
   if (!volumePreleveParam) {
@@ -124,6 +140,10 @@ function consolidateData(rawData) {
   }))
 
   data.volumePreleveTotal = sumBy(sortedDailyRows, row => row.values[volumePreleveParam.paramIndex])
+
+  if (quarterlyValues) {
+    data.quarterlyValues = quarterlyValues
+  }
 
   return data
 }
